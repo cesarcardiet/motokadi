@@ -20,12 +20,20 @@ class ApplicationController extends Controller
     public function index(Request $request): View
     {
         $status = $request->string('estado')->toString();
+        if ($status === '') {
+            $status = 'activas';
+        }
+
         $query = CreditApplication::query()
             ->forActor($request->user())
             ->with(['client', 'motorcycle', 'branch'])
             ->latest();
 
-        if ($status !== '') {
+        if ($status === 'activas') {
+            $query->active();
+        } elseif ($status === 'todas') {
+            // no status filter
+        } elseif ($status !== '') {
             $query->where('status', $status);
         }
 
@@ -34,13 +42,14 @@ class ApplicationController extends Controller
             'status' => $status,
             'statuses' => ApplicationStatus::cases(),
             'branches' => Branch::query()->orderBy('name')->get(),
+            'activeCount' => CreditApplication::query()->forActor($request->user())->active()->count(),
         ]);
     }
 
     public function show(Request $request, CreditApplication $application): View
     {
         $this->visible($request, $application);
-        $application->load(['client', 'motorcycle', 'branch', 'documents.reviewer', 'events.actor']);
+        $application->load(['client', 'motorcycle', 'branch', 'documents.reviewer', 'events.actor', 'contract.installments', 'contract.motorcycle']);
 
         return view('staff.applications.show', compact('application'));
     }
@@ -88,8 +97,8 @@ class ApplicationController extends Controller
             'note' => ['required', 'string', 'min:8', 'max:240'],
             'confirm' => ['accepted'],
         ], [
-            'confirm.accepted' => 'Confirma que la ubicación coincide con el solicitante.',
-            'note.min' => 'Describe cómo verificaste la ubicación.',
+            'confirm.accepted' => 'Confirma que la visita se realizó y que vive en esa dirección.',
+            'note.min' => 'Describe el resultado de la visita a domicilio.',
         ]);
 
         return $this->act($request, $application, fn () => $workflow->verifyLocation(
@@ -103,7 +112,21 @@ class ApplicationController extends Controller
 
     public function approve(Request $request, CreditApplication $application, ApplicationWorkflow $workflow): RedirectResponse
     {
-        return $this->act($request, $application, fn () => $workflow->approve($request->user(), $application));
+        $data = $request->validate([
+            'unit_cartel' => ['required', 'string', 'min:3', 'max:80'],
+            'unit_plate' => ['required', 'string', 'min:3', 'max:80'],
+            'unit_serial' => ['required', 'string', 'min:3', 'max:120'],
+        ], [
+            'unit_cartel.required' => 'Indica el número de cartel de la moto que se entrega.',
+            'unit_plate.required' => 'Indica el número de placa de la moto que se entrega.',
+            'unit_serial.required' => 'Indica el número de serial de la moto que se entrega.',
+        ]);
+
+        return $this->act($request, $application, fn () => $workflow->approve($request->user(), $application, [
+            'unit_cartel' => $data['unit_cartel'],
+            'unit_plate' => $data['unit_plate'],
+            'unit_serial' => $data['unit_serial'],
+        ]));
     }
 
     public function reject(Request $request, CreditApplication $application, ApplicationWorkflow $workflow): RedirectResponse

@@ -4,7 +4,7 @@ namespace App\Enums;
 
 enum DocumentType: string
 {
-    case Cedula = 'cedula';
+    case CedulaFront = 'cedula_frente';
     case Rif = 'rif';
     case License = 'licencia_2da';
     case Employment = 'constancia_trabajo';
@@ -12,9 +12,19 @@ enum DocumentType: string
     public function label(): string
     {
         return match ($this) {
-            self::Cedula => 'Copia de cédula actualizada',
+            self::CedulaFront => 'Cédula (frente)',
             self::Rif => 'RIF actualizado',
             self::License => 'Licencia y certificado de 2DA',
+            self::Employment => 'Constancia de trabajo',
+        };
+    }
+
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::CedulaFront => 'Cédula frente',
+            self::Rif => 'RIF',
+            self::License => 'Licencia + 2DA',
             self::Employment => 'Constancia de trabajo',
         };
     }

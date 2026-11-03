@@ -22,3 +22,15 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Flutter / mobile
+/mobile/.dart_tool/
+/mobile/.flutter-plugins
+/mobile/.flutter-plugins-dependencies
+/mobile/.packages
+/mobile/build/
+/mobile/.idea/
+/mobile/android/.gradle/
+/mobile/android/local.properties
+/mobile/ios/Pods/
+/mobile/ios/.symlinks/

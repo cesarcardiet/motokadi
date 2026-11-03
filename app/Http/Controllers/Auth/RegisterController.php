@@ -50,6 +50,6 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('client.applications.index');
+        return redirect()->intended(route('client.applications.index'));
     }
 }

@@ -25,8 +25,9 @@ class StoreCreditApplicationRequest extends FormRequest
             'branch_id' => ['required', Rule::exists('branches', 'id')->where('is_active', true)],
             'channel' => ['required', Rule::enum(ApplicationChannel::class)],
             'color' => ['required', 'string', Rule::in($colors)],
-            'address' => ['nullable', 'string', 'max:180', 'required_if:channel,en_linea'],
+            'address' => ['nullable', 'string', 'max:500', 'required_if:channel,en_linea'],
             'city' => ['required', 'string', 'max:80'],
+            'whatsapp_phone' => ['required', 'string', 'min:10', 'max:40', 'regex:/^[0-9+\s()-]+$/'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_if:channel,en_linea'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_if:channel,en_linea'],
         ];
@@ -46,6 +47,9 @@ class StoreCreditApplicationRequest extends FormRequest
             'documents.*.max' => 'Cada archivo puede pesar hasta 5 MB.',
             'latitude.required' => 'La ubicación GPS es obligatoria.',
             'longitude.required' => 'La ubicación GPS es obligatoria.',
+            'address.max' => 'La dirección es demasiado larga. Acórtala a 500 caracteres o menos.',
+            'whatsapp_phone.required' => 'El WhatsApp / teléfono es obligatorio.',
+            'whatsapp_phone.regex' => 'Usa un número de WhatsApp válido (solo dígitos, +, espacios o guiones).',
         ];
     }
 }

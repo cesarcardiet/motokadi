@@ -4,13 +4,16 @@
     <section class="hero">
         <p class="kicker">{{ $application->channel->label() }}</p>
         <h1>{{ $application->motorcycle->name }}</h1>
-        <p class="lead">{{ $application->color }} · {{ $application->branch->name }} · {{ $application->address }}, {{ $application->city }}</p>
+        <p class="lead">{{ $application->color }} · {{ $application->branch->name }} · {{ $application->address }}, {{ $application->city }}@if($application->whatsapp_phone) · WhatsApp {{ $application->whatsapp_phone }}@endif</p>
         <x-status-stepper :application="$application" />
-        <div class="quote-box">
-            <div><span class="muted">Precio</span><strong>{{ \App\Support\Money::usd($application->price) }}</strong></div>
-            <div><span class="muted">Inicial</span><strong>{{ \App\Support\Money::usd($application->initial_payment) }}</strong></div>
-            <div><span class="muted">Saldo</span><strong>{{ \App\Support\Money::usd($application->balance) }}</strong></div>
-            <div><span class="muted">Cuota</span><strong>{{ \App\Support\Money::usd($application->monthly_payment) }}</strong></div>
+        @if ($application->contract)
+            <x-assigned-moto :contract="$application->contract" />
+        @endif
+        <div class="quote-box dark-stats">
+            <div><span class="muted">Precio</span><strong>{!! \App\Support\Money::bothLines($application->price) !!}</strong></div>
+            <div><span class="muted">Inicial</span><strong>{!! \App\Support\Money::bothLines($application->initial_payment) !!}</strong></div>
+            <div><span class="muted">Saldo</span><strong>{!! \App\Support\Money::bothLines($application->balance) !!}</strong></div>
+            <div><span class="muted">Cuota</span><strong>{!! \App\Support\Money::bothLines($application->monthly_payment) !!}</strong></div>
         </div>
         <div class="panel">
             <h2>Documentos</h2>

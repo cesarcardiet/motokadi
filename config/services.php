@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
+    'notifications' => [
+        'webhook_url' => env('NOTIFICATION_WEBHOOK_URL'),
+        'webhook_secret' => env('NOTIFICATION_WEBHOOK_SECRET'),
+        'log_channel' => env('NOTIFICATION_LOG_CHANNEL', 'stack'),
+    ],
+
 ];
