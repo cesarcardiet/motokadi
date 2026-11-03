@@ -2,13 +2,19 @@
 
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ExchangeRateController;
 use App\Http\Controllers\Admin\MotorcycleController as AdminMotorcycleController;
+use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Admin\PortfolioController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\Client\ApplicationController as ClientApplicationController;
+use App\Http\Controllers\Client\PaymentController as ClientPaymentController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PlacesController;
 use App\Http\Controllers\Staff\ApplicationController as StaffApplicationController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +23,8 @@ Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.inde
 Route::get('/catalogo/{motorcycle:slug}', [CatalogController::class, 'show'])->name('catalog.show');
 Route::get('/simulacion', [CatalogController::class, 'simulation'])->name('simulation');
 Route::get('/requisitos', [CatalogController::class, 'requirements'])->name('requirements');
+Route::get('/api/lugares', [PlacesController::class, 'search'])->name('places.search');
+Route::get('/api/lugares/reverso', [PlacesController::class, 'reverse'])->name('places.reverse');
 
 Route::middleware('guest')->group(function () {
     Route::get('/ingresar', [LoginController::class, 'create'])->name('login');
@@ -25,15 +33,24 @@ Route::middleware('guest')->group(function () {
     Route::post('/registro', [RegisterController::class, 'store']);
 });
 
-Route::post('/salir', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
+Route::match(['get', 'post'], '/salir', [LoginController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('logout');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/notificaciones/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::post('/notificaciones/leer', [NotificationController::class, 'markRead'])->name('notifications.read');
+
     Route::middleware('permission:solicitudes.crear')->group(function () {
         Route::get('/mis-solicitudes', [ClientApplicationController::class, 'index'])->name('client.applications.index');
         Route::get('/mis-solicitudes/nueva', [ClientApplicationController::class, 'create'])->name('client.applications.create');
         Route::post('/mis-solicitudes', [ClientApplicationController::class, 'store'])->name('client.applications.store');
         Route::get('/mis-solicitudes/{application}', [ClientApplicationController::class, 'show'])->name('client.applications.show');
         Route::post('/mis-solicitudes/{application}/documentos/{document}', [ClientApplicationController::class, 'replaceDocument'])->name('client.documents.replace');
+        Route::get('/mis-pagos', [ClientPaymentController::class, 'index'])->name('client.payments.index');
+        Route::get('/mis-comprobantes', [ClientPaymentController::class, 'vouchers'])->name('client.payments.vouchers');
+        Route::get('/mis-comprobantes/{voucher}/pdf', [ClientPaymentController::class, 'downloadPdf'])->name('client.payments.voucher.pdf');
+        Route::post('/mis-pagos/cuotas/{installment}', [ClientPaymentController::class, 'store'])->name('client.payments.store');
     });
 
     Route::middleware('permission:solicitudes.revisar')->group(function () {
@@ -53,6 +70,15 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:panel.admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('/cartera', [PortfolioController::class, 'contracts'])->name('contracts.index');
+        Route::get('/cartera/{contract}', [PortfolioController::class, 'show'])->name('contracts.show');
+        Route::get('/perfiles-credito', [PortfolioController::class, 'profiles'])->name('profiles.index');
+        Route::get('/pagos', [AdminPaymentController::class, 'index'])->name('payments.index');
+        Route::get('/pagos/{voucher}', [AdminPaymentController::class, 'show'])->name('payments.show');
+        Route::post('/pagos/{voucher}/aprobar', [AdminPaymentController::class, 'approve'])->name('payments.approve');
+        Route::post('/pagos/{voucher}/rechazar', [AdminPaymentController::class, 'reject'])->name('payments.reject');
+        Route::get('/tasa', [ExchangeRateController::class, 'edit'])->name('exchange-rate.edit');
+        Route::put('/tasa', [ExchangeRateController::class, 'update'])->name('exchange-rate.update');
 
         Route::middleware('permission:sedes.gestionar')->group(function () {
             Route::get('/sedes', [BranchController::class, 'index'])->name('branches.index');

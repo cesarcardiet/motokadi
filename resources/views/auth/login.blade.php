@@ -18,7 +18,7 @@
             <label class="check full"><input type="checkbox" name="remember" value="1"> Recordarme</label>
         </div>
         <div class="actions"><button class="btn" type="submit">Entrar</button></div>
-        <p class="muted">¿No tienes cuenta? <a href="{{ route('register') }}">Regístrate</a></p>
+        <p class="muted">¿No tienes cuenta? <a href="{{ route('register', request()->only('next')) }}">Regístrate</a></p>
         <div class="demo">
             <strong>Cuentas de prueba</strong><br>
             admin@kadimotors.test<br>

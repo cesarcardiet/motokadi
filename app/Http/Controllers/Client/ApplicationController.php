@@ -49,15 +49,23 @@ class ApplicationController extends Controller
             return back()->withInput()->with('error', $exception->getMessage());
         }
 
+        $application->loadMissing('motorcycle');
+
         return redirect()
-            ->route('client.applications.show', $application)
-            ->with('status', 'Solicitud enviada. El plan quedó congelado con los precios de hoy.');
+            ->route('catalog.index', [
+                'solicitar' => $application->motorcycle->slug,
+                'canal' => 'en_linea',
+                'paso' => 'done',
+            ])
+            ->with('online_submitted', true)
+            ->with('online_application_url', route('client.applications.show', $application))
+            ->with('status', 'Solicitud enviada y pendiente de aprobación. También puedes seguir en una sede.');
     }
 
     public function show(Request $request, CreditApplication $application): View
     {
         abort_unless($application->user_id === $request->user()->id, 403);
-        $application->load(['motorcycle', 'branch', 'documents', 'events.actor']);
+        $application->load(['motorcycle', 'branch', 'documents', 'events.actor', 'contract.motorcycle']);
 
         return view('client.applications.show', [
             'application' => $application,

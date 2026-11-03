@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\CreditApplication;
 use App\Models\Motorcycle;
 use App\Models\User;
+use App\Services\Financing\ContractService;
 use App\Services\Financing\InstallmentSimulator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -19,8 +20,11 @@ use Illuminate\Auth\Access\AuthorizationException;
 
 class ApplicationWorkflow
 {
-    public function __construct(private readonly InstallmentSimulator $simulator)
-    {
+    public function __construct(
+        private readonly InstallmentSimulator $simulator,
+        private readonly ApplicationNotifier $notifier,
+        private readonly ContractService $contracts,
+    ) {
     }
 
     /**
@@ -29,7 +33,11 @@ class ApplicationWorkflow
      */
     public function open(User $client, array $attributes, array $uploads): CreditApplication
     {
-        return DB::transaction(function () use ($client, $attributes, $uploads) {
+        if ($client->hasActiveApplication()) {
+            throw new WorkflowException('Tienes una solicitud activa, espera la aprobación.');
+        }
+
+        $application = DB::transaction(function () use ($client, $attributes, $uploads) {
             $motorcycle = Motorcycle::query()->where('is_active', true)->findOrFail($attributes['motorcycle_id']);
             $branch = Branch::query()->where('is_active', true)->findOrFail($attributes['branch_id']);
 
@@ -72,6 +80,7 @@ class ApplicationWorkflow
                     ? $attributes['address']
                     : 'Se confirma al recibir la carpeta en sede',
                 'city' => $attributes['city'],
+                'whatsapp_phone' => $attributes['whatsapp_phone'] ?? null,
                 'latitude' => $attributes['latitude'] ?? null,
                 'longitude' => $attributes['longitude'] ?? null,
                 'submitted_at' => now(),
@@ -103,6 +112,10 @@ class ApplicationWorkflow
 
             return $application;
         });
+
+        $this->notifier->created($application);
+
+        return $application;
     }
 
     public function replaceDocument(User $client, ApplicationDocument $document, UploadedFile $file): void
@@ -206,7 +219,7 @@ class ApplicationWorkflow
             throw new WorkflowException('Todos los recaudos deben estar aceptados antes de pasar a la ubicación.');
         }
 
-        $this->move($application, $actor, ApplicationStatus::Location, 'Papeles verificados en sede. Sigue la verificación de ubicación.');
+        $this->move($application, $actor, ApplicationStatus::Location, 'Papeles verificados. Sigue la visita a domicilio / prueba de vista.');
     }
 
     public function verifyLocation(User $actor, CreditApplication $application, float $latitude, float $longitude, string $note): void
@@ -223,15 +236,39 @@ class ApplicationWorkflow
             $application,
             $actor,
             ApplicationStatus::Preapproved,
-            'Ubicación verificada ('.$latitude.', '.$longitude.'). '.$note,
+            'Visita / prueba de vista confirmada ('.$latitude.', '.$longitude.'). '.$note,
         );
     }
 
-    public function approve(User $actor, CreditApplication $application): void
+    /**
+     * @param  array{unit_cartel: string, unit_plate: string, unit_serial: string}  $unit
+     */
+    public function approve(User $actor, CreditApplication $application, array $unit): void
     {
         $this->assertActor($actor, $application, 'solicitudes.aprobar');
         $this->assertStatus($application, ApplicationStatus::Preapproved);
-        $this->move($application, $actor, ApplicationStatus::Approved, 'Aprobación final del financiamiento.');
+
+        $cartel = trim($unit['unit_cartel']);
+        $plate = trim($unit['unit_plate']);
+        $serial = trim($unit['unit_serial']);
+
+        if ($cartel === '' || $plate === '' || $serial === '') {
+            throw new WorkflowException('Para aprobar debes asignar la moto con cartel, placa y serial.');
+        }
+
+        $this->move(
+            $application,
+            $actor,
+            ApplicationStatus::Approved,
+            'Aprobación final. Moto asignada: cartel '.$cartel.', placa '.$plate.', serial '.$serial.'.',
+        );
+        $fresh = $application->fresh(['client', 'motorcycle', 'branch']);
+        $this->contracts->activateFromApproval($fresh, null, [
+            'unit_cartel' => $cartel,
+            'unit_plate' => $plate,
+            'unit_serial' => $serial,
+        ]);
+        $this->notifier->approved($fresh);
     }
 
     public function reject(User $actor, CreditApplication $application, string $reason): void
@@ -245,6 +282,7 @@ class ApplicationWorkflow
         $application->rejection_reason = $reason;
         $application->save();
         $this->move($application, $actor, ApplicationStatus::Rejected, $reason);
+        $this->notifier->rejected($application->fresh(['client', 'motorcycle', 'branch']), $reason);
     }
 
     private function assertStatus(CreditApplication $application, ApplicationStatus $expected): void

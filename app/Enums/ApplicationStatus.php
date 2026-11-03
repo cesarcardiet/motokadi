@@ -16,7 +16,7 @@ enum ApplicationStatus: string
         return match ($this) {
             self::Preevaluation => 'Preevaluación',
             self::Papers => 'Verificación de papeles',
-            self::Location => 'Verificación de ubicación',
+            self::Location => 'Visita / prueba de vista',
             self::Preapproved => 'Preaprobada',
             self::Approved => 'Aprobación final',
             self::Rejected => 'Rechazada',

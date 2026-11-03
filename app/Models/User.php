@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+use App\Enums\CreditProfile;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
@@ -20,6 +22,8 @@ class User extends Authenticatable
         'password',
         'phone',
         'national_id',
+        'credit_profile',
+        'is_reference_profile',
         'role_id',
         'branch_id',
         'is_active',
@@ -36,7 +40,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'credit_profile' => CreditProfile::class,
+            'is_reference_profile' => 'boolean',
         ];
+    }
+
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(FinancingContract::class);
     }
 
     public function role(): BelongsTo
@@ -52,6 +63,16 @@ class User extends Authenticatable
     public function applications(): HasMany
     {
         return $this->hasMany(CreditApplication::class);
+    }
+
+    public function activeApplication(): ?CreditApplication
+    {
+        return $this->applications()->active()->latest('id')->first();
+    }
+
+    public function hasActiveApplication(): bool
+    {
+        return $this->applications()->active()->exists();
     }
 
     public function hasPermission(string $slug): bool

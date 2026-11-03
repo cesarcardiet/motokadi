@@ -4,7 +4,7 @@
     <section class="section">
         <p class="kicker">Plan a 9 meses</p>
         <h1>Simulación de cuotas</h1>
-        <p class="muted">Saldo = precio − inicial. Cuota = saldo ÷ 9, truncada al centavo. Classic queda en $74,44, Diamante en $100,00 y Tundra en $107,77.</p>
+        <p class="muted">Saldo = precio − inicial. Cuota = saldo ÷ 9. Tasa vigente: {{ \App\Support\Money::rate() }}. Classic $74 · Diamante $100 · Tundra $108 (más bolívares).</p>
         <x-quote-table :motorcycles="$motorcycles" />
         {{ $motorcycles->links('partials.pager') }}
     </section>
