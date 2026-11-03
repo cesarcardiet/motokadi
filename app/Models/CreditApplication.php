@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CreditApplication extends Model
 {
@@ -25,6 +26,7 @@ class CreditApplication extends Model
         'term_months',
         'address',
         'city',
+        'whatsapp_phone',
         'latitude',
         'longitude',
         'location_verified_at',
@@ -73,6 +75,11 @@ class CreditApplication extends Model
         return $this->hasMany(ApplicationEvent::class)->latest();
     }
 
+    public function contract(): HasOne
+    {
+        return $this->hasOne(FinancingContract::class);
+    }
+
     public function scopeForActor(Builder $query, User $actor): Builder
     {
         if ($actor->hasPermission('panel.admin')) {
@@ -80,5 +87,18 @@ class CreditApplication extends Model
         }
 
         return $query->where('branch_id', $actor->branch_id);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', [
+            ApplicationStatus::Approved->value,
+            ApplicationStatus::Rejected->value,
+        ]);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status->isOpen();
     }
 }

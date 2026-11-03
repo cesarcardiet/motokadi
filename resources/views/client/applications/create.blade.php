@@ -80,7 +80,13 @@
         const select = document.getElementById('motorcycle_id');
         const color = document.getElementById('color');
         const preview = document.getElementById('quote-preview');
-        const money = (value) => '$' + Number(value).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+        const rate = Number(@json($usdVesRate ?? 1000));
+        const money = (value) => {
+            const whole = (n) => Math.round(Number(n)).toLocaleString('es-VE', { maximumFractionDigits: 0 });
+            const usd = '$' + whole(value) + ' USD';
+            const ves = 'Bs. ' + whole(Number(value) * rate);
+            return usd + '<br><span class="money-ves">' + ves + '</span>';
+        };
         function paint() {
             const moto = motos.find((item) => String(item.id) === select.value);
             if (!moto) return;
@@ -88,7 +94,7 @@
             color.innerHTML = moto.colors.map((item) => `<option value="${item}">${item}</option>`).join('');
             if (moto.colors.includes(previous)) color.value = previous;
             const quote = moto.quote;
-            preview.innerHTML = `<div class="quote-box"><div><span class="muted">Precio</span><strong>${money(quote.price)}</strong></div><div><span class="muted">Inicial</span><strong>${money(quote.initial)}</strong></div><div><span class="muted">Saldo</span><strong>${money(quote.balance)}</strong></div><div><span class="muted">Cuota</span><strong>${money(quote.monthly)}</strong></div></div>`;
+            preview.innerHTML = `<div class="quote-box"><div><span class="muted">Precio</span><strong>${money(quote.price)}</strong></div><div><span class="muted">Inicial</span><strong>${money(quote.initial)}</strong></div><div><span class="muted">Saldo</span><strong>${money(quote.balance)}</strong></div><div><span class="muted">Cuota</span><strong>${money(quote.monthly)}</strong></div></div><p class="muted rate-chip">Tasa: ${whole(rate)} Bs = 1 USD</p>`;
         }
         select.addEventListener('change', paint);
         paint();
